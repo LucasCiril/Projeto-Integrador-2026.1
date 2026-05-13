@@ -9,13 +9,14 @@ services:
     command:
       bash -c "
       apt update &&
-      apt install -y snmpd iproute2 net-tools iputils-ping &&
-      sed -i 's/agentaddress 127.0.0.1,\\[::1]/agentaddress udp:161/' /etc/snmp/snmpd.conf &&
+      DEBIAN_FRONTEND=noninteractive apt install -y snmpd snmp iproute2 net-tools iputils-ping &&
+      sed -i 's/^agent.*/agentAddress udp:161/' /etc/snmp/snmpd.conf &&
       echo 'rocommunity public' >> /etc/snmp/snmpd.conf &&
       service snmpd restart &&
       tail -f /dev/null
       "
-
+    expose:
+      - "161/udp"
     networks:
       - monitoring
 
@@ -25,6 +26,12 @@ services:
     ports:
       - "9116:9116"
 
+    command:
+      - '--config.file=/etc/snmp_exporter/snmp.yml'
+
+    volumes:
+      - ./snmp/snmp.yml:/etc/snmp_exporter/snmp.yml
+    
     networks:
       - monitoring
 
@@ -82,7 +89,7 @@ services:
     depends_on:
       - mysql-server
     environment:
-      - DB_SERBER_HOST=mysql-server
+      - DB_SERVER_HOST=mysql-server
       - MYSQL_DATABASE=zabbix
       - MYSQL_USER=zabbix
       - MYSQL_PASSWORD=zabbixpass
