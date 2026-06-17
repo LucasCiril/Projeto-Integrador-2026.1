@@ -1,24 +1,14 @@
 services:
 
   switch:
-    image: ubuntu:latest
+    build: ./snmp
     container_name: virtual-switch
-    privileged: true
-    hostname: switch-core
-
-    command:
-      bash -c "
-      apt update &&
-      DEBIAN_FRONTEND=noninteractive apt install -y snmpd snmp iproute2 net-tools iputils-ping &&
-      sed -i 's/^agent.*/agentAddress udp:161/' /etc/snmp/snmpd.conf &&
-      echo 'rocommunity public' >> /etc/snmp/snmpd.conf &&
-      service snmpd restart &&
-      tail -f /dev/null
-      "
     expose:
       - "161/udp"
     networks:
       - monitoring
+    volumes:
+      - ./snmp/snmpd.conf:/etc/snmp/snmpd.conf
 
   snmp-exporter:
     image: prom/snmp-exporter
@@ -35,93 +25,7 @@ services:
     networks:
       - monitoring
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    
-    networks:
-      - monitoring
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-
-    networks:
-      - monitoring
-
-  mysql-server:
-    image: mysql:8.0
-    container_name: zabbix-mysql
-    environment:
-      - MYSQL_DATABASE=zabbix
-      - MYSQL_USER=zabbix
-      - MYSQL_PASSWORD=zabbixpass
-      - MYSQL_ROOT_PASSWORD=rootpass
-
-    command: 
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_bin
-      --default-authentication-plugin=mysql_native_password 
-      --log-bin-trust-function-creators=1
-
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-    networks:
-      - monitoring
-
-  zabbix-server:
-    image: zabbix/zabbix-server-mysql:latest
-    container_name: zabbix-server
-    ports:
-      - "10051:10051"
-    depends_on:
-      - mysql-server
-    environment:
-      - DB_SERVER_HOST=mysql-server
-      - MYSQL_DATABASE=zabbix
-      - MYSQL_USER=zabbix
-      - MYSQL_PASSWORD=zabbixpass
-
-    networks:
-      - monitoring
-
-  zabbix-web:
-    image: zabbix/zabbix-web-nginx-mysql:latest
-    container_name: zabbix-web
-    ports:
-      - "8080:8080"
-    depends_on:
-      - zabbix-server
-      - mysql-server
-
-    environment:
-      - ZBX_SERVER_HOST=zabbix-server
-      - DB_SERVER_HOST=mysql-server
-      - MYSQL_DATABASE=zabbix
-      - MYSQL_PASSWORD=zabbixpass
-      - MYSQL_ROOT_PASSWORD=rootpass
-      - PHP_TZ=America/Sao_Paulo
-
-    networks:
-      - monitoring
-
-
-networks: 
-  monitoring: 
-    driver: bridge 
-
-volumes:
-  grafana_data:
-  mysql_data:
+networks:
+  monitoring:
+    driver: bridge
+    external: true
