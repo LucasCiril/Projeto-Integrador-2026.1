@@ -1,0 +1,35 @@
+groups:
+
+- name: switch-alerts
+
+  rules:
+
+  - alert: SwitchDown
+
+    expr: up == 0
+
+    for: 1m
+
+    labels:
+      severity: critical
+
+    annotations:
+      summary: "Switch indisponível"
+
+      description: "O dispositivo não responde há mais de 1 minuto."
+
+  - alert: InterfaceDown
+
+    expr: ifOperStatus != 1
+
+    for: 30s
+
+    labels:
+      severity: critical
+
+    annotations:
+      summary: "Interface Down"
+
+      description: "Uma interface do switch está fora de operação."
+
+  
